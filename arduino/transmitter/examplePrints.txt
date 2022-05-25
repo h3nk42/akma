@@ -1,0 +1,4 @@
+degree == 92:
+
+    111111110      |   001011100   |   001011100   |   --------
+< startSequence >  |  < degree >   |   < degree >

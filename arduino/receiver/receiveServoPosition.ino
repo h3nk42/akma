@@ -67,17 +67,19 @@ boolean frame[27];
 uint8_t frameIterator = 0;
 
 // STARTBYTE9
-bool startByte9[9] =  {1,1,1,1,1,1,1,1,0};
+bool startByte9[9] =  {1,1,1,1,1,1,1,1,0}; //510
 
 // RECEIVED PAYLOAD
 boolean payload[9];
+
+float currentAngle = 0;
 
 
 int8_t moduloFrameSize(uint8_t index) {
     return(index % frameSize);
 }
 
-int8_t findStartByte9InFrame () {
+int8_t findLastIndexOfStartByte9InFrame () {
     uint8_t startByteFoundIterator = 0;
     int8_t lastIndexOfStartByte = -1;
     for(int i = 0; i<= 34; i++) {
@@ -94,12 +96,14 @@ int8_t findStartByte9InFrame () {
 }
 
 bool checkPayloadAndParity (uint8_t lastIndexOfStartByte9) {
+    uint8_t onesCounter = 0 ;
     for (int i = 0; i<9; i++) {
+        if( frame[ moduloFrameSize( lastIndexOfStartByte9+1 + i ) ] == 1 ) {onesCounter ++;}
         if( frame[ moduloFrameSize( lastIndexOfStartByte9+1 + i ) ] !=  frame[ moduloFrameSize(lastIndexOfStartByte9+1 + i + 9)] ) {
             return false;
         }
     }
-    return true;
+    return onesCounter != 9;
 }
 
 void retrievePayload(uint8_t lastIndexOfStartByte9) {
@@ -108,7 +112,7 @@ void retrievePayload(uint8_t lastIndexOfStartByte9) {
      }
 }
 
-float convertByte9ToUint8 () {
+float convertByte9ToFloat () {
     float payloadInDec = 0;
     for (uint8_t i = 0; i<9; i++) {
          payloadInDec += payload[i] ? 1 * pow(2,8-i) : 0;
@@ -118,7 +122,6 @@ float convertByte9ToUint8 () {
 
 
 void writeAngleToServos(float angle) {
-
     if(angle > 180) {
         servoX.write(180);
         servoY.write(angle-180);
@@ -181,17 +184,22 @@ void loop() {
                     // high
                     highTime = micros();
                 }
-            } else {
-                        if(checkPayloadAndParity(findStartByte9InFrame())){
-                            retrievePayload(findStartByte9InFrame());
-                            /*  Serial.println(convertByte9ToUint8()); */
-                            float angleToWrite = convertByte9ToUint8();
-
-                            if (angleToWrite <= 360 && angleToWrite >= 0) {
-                                writeAngleToServos(angleToWrite);
+            } else {    
+                        int8_t lastIndexOfStartByte = findLastIndexOfStartByte9InFrame();
+                        if(lastIndexOfStartByte == -1) {
+                        } else {
+                            if(checkPayloadAndParity(lastIndexOfStartByte)){
+                                retrievePayload(lastIndexOfStartByte);
+                                float angleToWrite = convertByte9ToFloat();
+                                if (currentAngle == angleToWrite) {
+                                } else {
+                                    if (angleToWrite <= 360 && angleToWrite >= 0) {
+                                        writeAngleToServos(angleToWrite);
+                                        currentAngle = angleToWrite;
+                                    }
+                                }
                             }
                         }
-
                     printed = true;
                 }
         }

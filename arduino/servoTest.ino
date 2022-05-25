@@ -1,4 +1,4 @@
-#include <Servo.h>
+/* #include <Servo.h>
 
 Servo servoX;
 Servo servoY;
@@ -43,4 +43,4 @@ void loop() {
     delay(100);
 
     Serial.println(analogRead(input));
-}
+} */

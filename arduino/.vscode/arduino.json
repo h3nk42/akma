@@ -1,6 +1,6 @@
 {
     "port": "/dev/ttyACM0",
-    "sketch": "receiver/receiveServoPosition.ino",
+    "sketch": "transmitter/transmitAngleFromPoti.ino",
     "board": "arduino:avr:uno",
     "programmer": "arduino:avrisp"
 }

@@ -3,57 +3,37 @@ uint8_t poti = A0;
 
 
 bool transmitting = false;
-int transmittingCounter = 0;
+uint8_t transmittingCounter = 0;
+
 
 //@400Hz
-int period = 2500;
-int pulseWidthHigh = period/2;
-int pulseWidthLow = period/4;
+uint16_t period = 2500;
+uint16_t pulseWidthHigh = period/2;
+uint16_t pulseWidthLow = period/4;
 
 
-bool startByte9[9] =  {1,1,1,1,1,1,1,1,0};
-bool payLoad[9] = {0,1,0,1,1,0,1,0,0};
-//bool payLoad[9] = {0,0,0,0,0,0,0,0,0};
+uint16_t startByte9 =  510;
+int16_t currentDegree = 0;
+
+uint16_t potiBuffer[3] = {0};
+
 
 uint8_t byte9Size = 9;
 uint8_t frameSize = 3;
-bool frame[3][9] = {{0}};
 
 uint8_t frameIterator = 0;
 uint8_t byte9Iterator = 0;
-
-void fillFrame(){
-  for(int i = 0; i<byte9Size; i++) {
-      frame[0][i] = startByte9[i];
-  }
-   for(int i = 0; i<byte9Size; i++) {
-      frame[1][i] = payLoad[i];
-  }
-   for(int i = 0; i<byte9Size; i++) {
-      frame[2][i] = payLoad[i];
-  }
-}
 
 int mapInputToDegree(int input) {
     return input / (341.00/120.00);
 }
 
-void writeDegreeToPayloadAndThenTransmit(int degree) {
-    int a[9] = { 0,0,0, 0,0,0, 0,0,0  };
-    int decimal = degree; 
-    for(int i = 0;decimal>0;i++){    
-        a[i] = decimal%2;    
-        decimal = decimal/2;    
-    }    
-    for(int i = 8 ;i >= 0 ;i--){
-        frame[1][8-i] = a[i];
-        frame[2][8-i] = a[i];
-    } 
+int getBitFromIntAtIndex(int number, uint8_t index) {
+    return (number & ( 1 << index )) >> index;
 }
 
 
 void setup() {
-    fillFrame();
 
     pinMode(laser, OUTPUT);
     pinMode(poti, INPUT);
@@ -62,7 +42,7 @@ void setup() {
 
 }
 
-void writeBit(boolean bit) {
+void transmitBit(boolean bit) {
   digitalWrite(laser, HIGH);
   bit ? delayMicroseconds(pulseWidthHigh) : delayMicroseconds(pulseWidthLow);
   digitalWrite(laser, LOW);
@@ -71,27 +51,41 @@ void writeBit(boolean bit) {
 
 void loop() {
     if(transmitting) {
-        writeBit(frame[frameIterator][byte9Iterator]);
+        if(frameIterator == 0) {
+            transmitBit(getBitFromIntAtIndex(startByte9,  8 - byte9Iterator));
+            //Serial.print(getBitFromIntAtIndex(startByte9,  8 - byte9Iterator));
+        } else {
+            transmitBit(getBitFromIntAtIndex(currentDegree, 8 - byte9Iterator));
+            //Serial.print(getBitFromIntAtIndex(currentDegree, 8 - byte9Iterator));
+        }
         byte9Iterator++;
         if(byte9Iterator == byte9Size ) {
             byte9Iterator = 0;
             frameIterator ++;
+            //Serial.print("   |   ");
         }
         if(frameIterator == frameSize){
             frameIterator = 0;
             transmittingCounter ++;
-            if(transmittingCounter > 1) {
+            //Serial.println("--------"); 
+            //Serial.println("");
+            if(transmittingCounter > 5) {
                 transmitting = false;
                 transmittingCounter = 0;
+               
             }
         }
     } else {
-        writeDegreeToPayloadAndThenTransmit(mapInputToDegree(analogRead(poti)));
-        /* for(int i =0; i<9;i++) {
-            Serial.print(frame[1][i]);
+        uint16_t potiRead = analogRead(poti);
+        Serial.println(potiRead);
+        Serial.println("---------");
+        int16_t newDegree = mapInputToDegree(potiRead);
+        if( currentDegree - 1 <= newDegree && currentDegree + 1 >=  newDegree ) {
+        }else {
+            currentDegree = newDegree;
         }
-        Serial.println("---"); */
-        Serial.println(mapInputToDegree(analogRead(poti)));
+
         transmitting = true;
+
     }
 }
